@@ -1,0 +1,139 @@
+clear
+clc
+
+%Create a spatial reference object that tells Matlab where your data are in
+%space
+R = georasterref();
+R.RasterSize = [621 1405];
+R.LatitudeLimits = [24.0625 49.9375];
+R.LongitudeLimits = [-125.0208333 -66.4791667];
+R.ColumnsStartFrom = 'north';
+R.RowsStartFrom = 'west';
+
+tmean = NaN(621,1405,38);
+count = 0; 
+%Loop through all of the files, which are grouped by year and months
+for i = 1981:2018
+ 
+    fileName = ['PRISM_tmean_stable_4kmM2_' num2str(i) '01_bil.bil']; 
+    %open the PRISM file
+    fid = fopen(fileName); 
+    data = fread(fid,[1405 621],'float');
+    fclose(fid); 
+    
+    %Replace missing values (-1000) with NaN
+
+for j = 1:621
+     data(data(:,j) <= -1000, j) = NaN;
+end
+    data1 = data'; %transpose the data to make it latitude x longitude
+        
+    count = count + 1; 
+    tmean(:,:,count) = data1 ; 
+        
+    clear fileName fid data 
+end
+
+%The output of this code will be "tmean", which will be a 3-D object that
+%is latitude x longitude x time (months). 
+
+%To differentiate years that belong to El Nino, La Nino, and Non Nino
+%winters.
+
+enso = importdata('Nino_3.4 index.csv');
+count = 1;
+count2 = 1;
+count3 = 1;
+for p= 1:38
+     
+      if enso(p,2)>0.5;
+          
+          elnino(count,1) = enso(p,1);
+          count = count+1;
+     
+      end
+      
+      if enso(p,2)<-0.5;
+          
+          lanino(count2,1) = enso(p,1);
+          count2 = count2+1;
+      
+  
+      end
+      if and(enso(p,2)>-0.5,enso(p,2)<0.5);
+          neunino(count3,1)= enso(p,1);
+          count3 = count3+1;
+      end      
+ end
+ 
+ for m = 1:(count-1)
+     el = elnino(m,1);
+     elnino_tmean(:,:,m) = tmean(:,:,(el-1981+1));
+ end
+ 
+for n = 1:(count2-1)    
+     la = lanino(n,1);
+        lanino_tmean(:,:,n) = tmean(:,:,(la-1981+1));
+end
+
+for o = 1:(count3-1)
+        neu = neunino(o,1);  
+        neunino_tmean(:,:,o) = tmean(:,:,(neu-1981+1));
+end
+ 
+%After this part the program creates three 3d array for each elnino, lanino
+%and neutral nino years.
+
+%%
+for p = 1:621
+  for q = 1:1405
+        elnino1 = elnino_tmean(p,q,:);  
+            result_tmean(p,q) = mean(elnino1);
+        lanino1 = lanino_tmean(p,q,:);
+            result2_tmean(p,q) = mean(lanino1);
+        neunino1 = neunino_tmean(p,q,:);
+            result3_tmean(p,q) = mean(neunino1);
+       end 
+end
+
+%To make ANOVA test between each temperature mean values between Elnino,
+%Lanino and Neutral Nino years for each grid cell.
+%%
+g = NaN(621,1405);
+res = NaN(872505,1);
+res2 = NaN(872505,1);
+res3 = NaN(872505,1);
+for c = 1:621
+ for v = 1:1405
+        res(:,1) = result_tmean(c,v);
+        res2(:,1) = result2_tmean(c,v);
+        res3(:,1) = result3_tmean(c,v);
+  end
+end
+
+        y = [res, res2, res3];
+        groups = {'elnino','lanino','neunino'};
+        g(c,v) = anova1(y,groups,'off');
+%%
+figure
+geoshow (g,R,'DisplayType','Surface');
+cb = colorbar
+
+%To plot the mean values and the ANOVA result.
+%%
+figure
+geoshow(result_tmean,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+cb = colorbar
+title ('Average January El Nino Temperature from 1981 to 2018')
+
+figure
+geoshow (result2_tmean,R,'DisplayType','Surface');
+cb = colorbar
+title('Average January La Nino Temperature from 1981 to 2018')   
+    
+figure
+geoshow (result3_tmean,R,'DisplayType','Surface');
+cb = colorbar
+title('Average Neutral Nino Temperature from 1981 to 2018')   
+    
+%%
