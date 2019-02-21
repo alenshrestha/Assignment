@@ -1,0 +1,24 @@
+
+stations1 = dir('*_GLEAM_NCEP.csv'); 
+
+%stations1 = dir('D:\SIUC docs\Course\Spring 2019\Climate Data and Analysis\Assignment 3\Multiple Regression\*.csv'); 
+stations2 = dir('*_PREDICTED PET.csv');
+
+for p = 1:length(stations1)
+    p
+  
+    %Open daily surface weather station data
+    wsData1 = importdata(stations1(p).name);
+    wsData2 = importdata(stations2(p).name);
+    
+   
+     wsData1(:,13) = wsData2(:,11); %append predicted PET to the end of the GLEAM NCEP PET data file.
+    
+    csvwrite([stations1(p).name(1:end-4) '_REGRESS.csv'], wsData1);
+    
+    
+  
+    
+    clear wsData sub row col lat lon 
+    clc
+end
