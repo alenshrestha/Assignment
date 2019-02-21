@@ -1,0 +1,17 @@
+
+stations3 = dir('*_REGRESS.csv');
+
+for q = 1:length(stations3)
+    
+    wsData3 = importdata(stations3(q).name);
+    avg(q,1) = nanmean(wsData3(:,8));
+    avg(q,2) = nanmean(wsData3(:,11));
+    avg(q,3) = nanmean(wsData3(:,12));
+    avg(q,4) = nanmean(wsData3(:,13));
+    
+    sd(q,1) = nanstd(wsData3(:,8));
+    sd(q,2) = nanstd(wsData3(:,11));
+    sd(q,3) = nanstd(wsData3(:,12));
+    sd(q,4) = nanstd(wsData3(:,13));
+    
+end
