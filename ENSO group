@@ -1,0 +1,195 @@
+clear
+clc
+
+%Create a spatial reference object that tells Matlab where your data are in
+%space
+R = georasterref();
+R.RasterSize = [621 1405];
+R.LatitudeLimits = [24.0625 49.9375];
+R.LongitudeLimits = [-125.0208333 -66.4791667];
+R.ColumnsStartFrom = 'north';
+R.RowsStartFrom = 'west';
+
+ppt = NaN(621,1405,37);
+count = 0; 
+%Loop through all of the files, which are grouped by year and months
+for i = 1981:2018
+ 
+    fileName = ['PRISM_ppt_stable_4kmM3_' num2str(i) '01_bil.bil']; 
+    %open the PRISM file
+    fid = fopen(fileName); 
+    data = fread(fid,[1405 621],'float');
+    fclose(fid); 
+    
+    %Replace missing values (-1000) with NaN
+
+for j = 1:621
+     data(data(:,j) <= -1000, j) = NaN;
+end
+    data1 = data'; %transpose the data to make it latitude x longitude
+        
+    count = count + 1; 
+    ppt(:,:,count) = data1 ; 
+        
+    clear fileName fid data 
+end
+
+%The output of this code will be "tmean", which will be a 3-D object that
+%is latitude x longitude x time (months). 
+
+%To differentiate years that belong to El Nino, La Nino, and Non Nino
+%winters.
+%%
+enso = importdata('Nino_3.4 index.csv');
+count = 1;
+count2 = 1;
+count3 = 1;
+for p= 1:38
+     
+      if enso(p,2)>0.5;
+          
+          elnino(count,1) = enso(p,1);
+          count = count+1;
+     
+      end
+      
+      if enso(p,2)<-0.5;
+          
+          lanino(count2,1) = enso(p,1);
+          count2 = count2+1;
+      
+  
+      end
+      if and(enso(p,2)>-0.5,enso(p,2)<0.5);
+          neunino(count3,1)= enso(p,1);
+          count3 = count3+1;
+      end      
+ end
+ 
+ for m = 1:(count-1)
+     el = elnino(m,1);
+     elnino_ppt(:,:,m) = ppt(:,:,(el-1981+1));
+ end
+ 
+for n = 1:(count2-1)    
+     la = lanino(n,1);
+        lanino_ppt(:,:,n) = ppt(:,:,(la-1981+1));
+end
+
+for o = 1:(count3-1)
+        neu = neunino(o,1);  
+        neunino_ppt(:,:,o) = ppt(:,:,(neu-1981+1));
+end
+ 
+%After this part the program creates three 3d array for each elnino, lanino
+%and neutral nino years.
+
+%%
+for p = 1:621
+  for q = 1:1405
+        elnino1 = elnino_ppt(p,q,:);  
+            result(p,q) = mean(elnino1);
+        lanino1 = lanino_ppt(p,q,:);
+            result2(p,q) = mean(lanino1);
+        neunino1 = neunino_ppt(p,q,:);
+            result3(p,q) = mean(neunino1);
+  end 
+end
+
+%%
+g = NaN(621,1405);
+group(1:13,1) = {'elnino'}
+group(14:27,1) = {'lanino'}
+group(28:38,1) = {'neunino'}
+for c = 1:621
+ for v = 1:1405
+        y(1:13,1) = elnino_ppt(c,v,:);
+        y(14:27,1) = lanino_ppt(c,v,:);
+        y(28:38,1) = neunino_ppt(c,v,:);
+        g(c,v) = anova1(y,group,'off');
+  end
+end
+
+diff = (result-result3);
+diff2 = (result2-result3);
+
+%%
+
+%To plot maps 
+%%
+
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(result,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./265); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('Average January El Nino years Precipitation from 1981 to 2018') 
+%%
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(result2,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./255); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('Average January La Nina years Precipitation from 1981 to 2018')     
+%%
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(result3,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./255); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('Average January Neutral Nino years Precipitation from 1981 to 2018')    
+%%
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(diff,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./255); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('Precipitation difference between El Nino and Neutral Nino years from 1981 to 2018') 
+%%
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(diff2,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./255); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('Precipitation difference between La Nina and Neutral Nino years from 1981 to 2018') 
+%%
+%To plot the mean values and the ANOVA result.
+ax = usamap('conus'); %open an empty map with U.S. extent
+states = shaperead('usastatelo','UseGeoCoords',true); %import the built-in Matlab U.S. state shapefile
+cmap = load('red_blue.mat'); %Import the red to blue colormap. You will need the "red_blue.mat" file
+cmap = cmap.red_blue; 
+
+geoshow(g,R,'DisplayType','Surface'); %map the correlation coefficients on the map
+geoshow(ax,states,'DisplayType','Polygon','FaceColor','None'); %map the state shapefile
+colormap(cmap./205); %use the red-to-blue colormap
+cb = colorbar
+%caxis([-2 3]); %set the range of your colormap to the range of correlations (-1 to 1)
+title ('P value map for ANOVA test for precipitation from 1981 to 2018') 
+%%    
+    
+    
