@@ -1,0 +1,20 @@
+clear
+clc
+tic
+%---------------------------------------
+%Import daily tavg observations into Matlab
+stations = dir('D:\SIUC docs\Course\Spring 2019\Thesis-Anthropogenic effect\Data\india water portal\*_frmtd.csv');
+
+for p = 1:length(stations)
+data1 = importdata(stations(p).name);
+
+
+for i = 1950:2000
+     idx = find(data1(:,1)==i);
+     meandata = mean(data1(idx,2));
+end     
+     data1(:,3) = data1(:,2)-meandata;
+csvwrite([stations(p).name '_tempanom.csv'],data1);
+
+end
+
