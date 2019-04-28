@@ -1,0 +1,35 @@
+clear
+clc
+tic
+%---------------------------------------
+%Import daily ASOS station observations into Matlab
+%stations = dir('SPEI01*.csv');
+
+bull2 = importdata('*1x.csv');
+bull = bull2.data;
+%bullnew = NaN(432,1)
+
+%for k = 1:length(dir)
+%bull2 = importdata(stations(k).name);
+%bull = bull2.data;
+
+a = 1;
+b = 12;
+for ii = 1:36
+   bullnew(ii,:) = bull(a:b,1);
+  a = a+12;
+  b = b+12;
+end
+%%
+%csvwrite('SPEI01-Bullheadnew.csv',bullnew);
+
+enso3 = importdata('ENSO 3.4 index.csv');
+enso2 = enso3.data;
+%w = 1;
+for i = 1:12
+    spei1 = bullnew(:,i);
+    enso1 = enso2(:,i);
+     result = corrcoef(spei1,enso1);
+     result1(1,i) = result(2,1);     %Extracting the R value each time corrcoef runs
+end
+%end
