@@ -1,0 +1,45 @@
+
+
+stations = dir('*REGRESS.csv');
+
+for p = 1:length(stations)
+    p
+  
+    %Open daily surface weather station data
+    wsData1 = importdata(stations(p).name);
+    
+    X = [ones(size(wsData1(:,8))) wsData1(:,4:5:6:7)];
+    Y = wsData1(:,8);
+    [b,~,~,~,~] = regress(Y,X);
+    [~,~,r,~,~] = regress(Y,X);
+    [~,~,~,~,stats] = regress(Y,X);
+    bval(p,:) = b';
+    stats1(p,:) = stats;
+    predict(:,1) = bval(p,1)+(bval(p,2)*wsData1(:,4))+(bval(p,3)*wsData1(:,5))+(bval(p,4)*wsData1(:,6))+(bval(p,5)*wsData1(:,7));
+    
+    %wsData1(:,11) = predict(:,1); %append predicted PET to the end of the GLEAM NCEP PET data file.
+   
+    rmse(p,1) = sqrt(nanmean((wsData1(:,13)-wsData1(:,8)).^2)); %rmse comparsion between predicted regression and observed data.
+    rmse(p,2) = sqrt(nanmean((wsData1(:,11)-wsData1(:,8)).^2)); %rmse comparsion between GLEAM and observed data.
+    rmse(p,3) = sqrt(nanmean((wsData1(:,12)-wsData1(:,8)).^2)); %rmse comparsion between NCEP and observed data.
+    
+    mae(p,1) = nanmean(abs(wsData1(:,13)-wsData1(:,8)));
+    mae(p,2) = nanmean(abs(wsData1(:,11)-wsData1(:,8)));
+    mae(p,3) = nanmean(abs(wsData1(:,12)-wsData1(:,8)));
+    
+    rsq(p,1) = corrcoef(wsData1(:,8),wsData1(:,13),'Rows','complete');
+    rsq(p,2) = corrcoef(wsData1(:,8),wsData1(:,11),'Rows','complete');
+    rsq(p,3) = corrcoef(wsData1(:,8),wsData1(:,12),'Rows','Complete');
+    
+    bias(p,1) = mean(wsData(:,8)-wsData(:,13));
+    bias(p,2) = mean(wsData(:,8)-wsData(:,11));
+    bias(p,3) = mean(wsData(:,8)-wsData(:,12));
+    
+    %csvwrite([stations(p).name(1:end-4) '_PREDICTED PET.csv'], wsData1); 
+    
+   
+    clear wsData1 
+    clc
+end
+
+
